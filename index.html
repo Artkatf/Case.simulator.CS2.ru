@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS2 Case Simulator — Кейсы, Рубли и Подкрутка</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+  body { background: #0e1117; color: #e6edf3; min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: 0.5px; color: #f0f6fc; }
+  .brand span { color: #f59e0b; }
+  .status-pill { font-size: 12px; padding: 3px 10px; border-radius: 12px; background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .status-pill.ok { background: rgba(35, 134, 54, 0.2); color: #3fb950; border-color: rgba(63, 185, 80, 0.4); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .balance-box { display: flex; align-items: center; gap: 8px; background: #0d1117; border: 1px solid #30363d; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 14px; }
+  .bal-usd { color: #3fb950; }
+  .bal-rub { color: #f59e0b; border-left: 1px solid #30363d; padding-left: 8px; }
+  .btn { background: #21262d; color: #e6edf3; border: 1px solid #30363d; padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.15s; }
+  .btn:hover:not(:disabled) { background: #30363d; border-color: #8b949e; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #2ea043; }
+  .btn-rub { background: linear-gradient(135deg, #d97706, #b45309); border-color: #f59e0b; color: #fff; }
+  .btn-rub:hover:not(:disabled) { filter: brightness(1.1); }
+  .promo-form { display: flex; gap: 6px; }
+  .promo-form input { background: #0d1117; border: 1px solid #30363d; color: #fff; padding: 6px 10px; border-radius: 8px; width: 120px; font-size: 13px; outline: none; }
+  .promo-form input:focus { border-color: #58a6ff; }
+  main { max-width: 1240px; width: 100%; margin: 0 auto; padding: 20px; flex: 1; }
+  .top-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+  @media (max-width: 860px) { .top-panels { grid-template-columns: 1fr; } }
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 16px; }
+  .panel-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; color: #f0f6fc; }
+  .boost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .boost-card { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: 0.15s; }
+  .boost-card:hover { border-color: #f59e0b; }
+  .boost-card.active { border-color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+  .boost-name { font-weight: 700; font-size: 13px; color: #fbbf24; }
+  .boost-desc { font-size: 11px; color: #8b949e; margin: 4px 0; }
+  .boost-price { font-weight: 700; font-size: 12px; color: #fff; }
+  .earn-list { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .earn-info { font-size: 12px; color: #8b949e; margin-bottom: 10px; line-height: 1.4; }
+  .section-title { font-size: 17px; font-weight: 700; margin: 18px 0 12px; display: flex; align-items: center; justify-content: space-between; }
+  .cases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .case-card { background: #161b22; border: 2px solid #30363d; border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; transition: 0.15s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+  .case-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
+  .case-card.selected { border-color: #f59e0b; background: #1c212b; }
+  .case-card img { width: 110px; height: 85px; object-fit: contain; margin-bottom: 8px; }
+  .case-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #f0f6fc; }
+  .case-price { font-size: 13px; font-weight: 700; color: #3fb950; }
+  .roulette-box { background: #161b22; border: 1px solid #30363d; border-radius: 14px; padding: 20px; margin-bottom: 24px; text-align: center; }
+  .roulette-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .roulette-viewport { position: relative; width: 100%; height: 150px; overflow: hidden; background: #0d1117; border: 2px solid #30363d; border-radius: 10px; margin-bottom: 16px; }
+  .roulette-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; background: #f59e0b; z-index: 10; box-shadow: 0 0 10px #f59e0b; }
+  .roulette-track { display: flex; height: 100%; align-items: center; will-change: transform; }
+  .r-item { min-width: 140px; max-width: 140px; height: 134px; margin: 0 4px; background: #161b22; border-radius: 8px; border-bottom: 4px solid #4b69ff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; text-align: center; }
+  .r-item img { width: 105px; height: 75px; object-fit: contain; margin-bottom: 6px; }
+  .r-item span { font-size: 11px; font-weight: 600; line-height: 1.2; color: #e6edf3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .rarity-mil { border-bottom-color: #4b69ff !important; }
+  .rarity-res { border-bottom-color: #8847ff !important; }
+  .rarity-cla { border-bottom-color: #d32ce6 !important; }
+  .rarity-cov { border-bottom-color: #eb4b4b !important; }
+  .rarity-gold { border-bottom-color: #ffd700 !important; background: linear-gradient(180deg, #161b22 40%, rgba(255,215,0,0.18) 100%); }
+  .open-actions { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .btn-open { font-size: 16px; padding: 12px 32px; border-radius: 10px; }
+  .contents-grid, .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; }
+  .skin-card { background: #161b22; border: 1px solid #30363d; border-bottom: 4px solid #4b69ff; border-radius: 10px; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+  .skin-card img { width: 115px; height: 82px; object-fit: contain; margin: 0 auto 6px; }
+  .skin-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #f0f6fc; }
+  .skin-price { font-size: 12px; font-weight: 700; color: #3fb950; margin-bottom: 6px; }
+
+  /* Секция инвентаря с красной чертой и свечением */
+  .inventory-section {
+    margin-top: 34px;
+    padding: 22px;
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, #161b22 100%);
+    border: 1px solid rgba(239, 68, 68, 0.55);
+    border-top: 4px solid #ef4444;
+    border-radius: 14px;
+    box-shadow: 0 0 28px rgba(239, 68, 68, 0.35), inset 0 4px 18px rgba(239, 68, 68, 0.15);
+  }
+  .inventory-section .section-title {
+    margin-top: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.65);
+  }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #161b22; border: 2px solid #30363d; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; text-align: center; }
+  .modal img { width: 190px; height: 140px; object-fit: contain; margin: 12px auto; }
+  .modal h3 { font-size: 18px; margin-bottom: 6px; }
+  .modal-btns { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: #21262d; border: 1px solid #58a6ff; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 200; opacity: 0; pointer-events: none; transition: 0.25s; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    CS2 <span>CASE SIMULATOR</span>
+    <div id="apiStatus" class="status-pill">Загрузка фото CS2...</div>
+  </div>
+  <div class="controls">
+    <div class="balance-box">
+      <span class="bal-usd" id="usdDisplay">$100.00</span>
+      <span class="bal-rub" id="rubDisplay">150 ₽</span>
+    </div>
+    <button class="btn btn-primary" id="dailyBtn" onclick="claimDaily()">Бонус +$50 и +100 ₽</button>
+    <div class="promo-form">
+      <input type="text" id="promoInput" placeholder="Промокод..." onkeydown="if(event.key==='Enter') applyPromo()">
+      <button class="btn" onclick="applyPromo()">Ввести</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="top-panels">
+    <div class="panel">
+      <div class="panel-title">
+        <span>Магазин подкрутки за рубли (₽)</span>
+        <span id="activeBoostBadge" style="font-size:12px; color:#fbbf24;">Подкрутка: Выкл</span>
+      </div>
+      <div class="boost-grid">
+        <div class="boost-card" id="boost1" onclick="buyBoost(1, 100)">
+          <div class="boost-name">Подкрутка x2</div>
+          <div class="boost-desc">Шанс на Тайное и Нож x2 (на 1 открытие)</div>
+          <div class="boost-price">100 ₽</div>
+        </div>
+        <div class="boost-card" id="boost2" onclick="buyBoost(2, 250)">
+          <div class="boost-name">Подкрутка x5</div>
+          <div class="boost-desc">Шанс на Тайное и Нож x5 (на 1 открытие)</div>
+          <div class="boost-price">250 ₽</div>
+        </div>
+        <div class="boost-card" id="boost3" onclick="buyBoost(3, 600)">
+          <div class="boost-name">Гарант Редкого</div>
+          <div class="boost-desc">Только Засекреченное, Тайное или Нож</div>
+          <div class="boost-price">600 ₽</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">
+        <span>Как получать рубли (₽)</span>
+        <span id="openCounter" style="font-size:12px; color:#8b949e;">Открыто кейсов: 0</span>
+      </div>
+      <div class="earn-info">
+        • За каждое открытие любого кейса начисляется <b>+15 ₽</b> кэшбэка.<br>
+        • При продаже скинов в инвентаре даётся бонус <b>1 ₽ за каждый $1</b> цены.<br>
+        • Можно обменять доллары на рубли по курсу <b>$10 = 100 ₽</b> или кликать монету.
+      </div>
+      <div class="earn-list">
+        <button class="btn btn-rub" onclick="clickRub()">Клик +5 ₽</button>
+        <button class="btn" onclick="exchangeUsdToRub()">Обменять $10 → 100 ₽</button>
+        <button class="btn" onclick="exchangeUsdToRubBig()">Обменять $100 → 1,000 ₽</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Выберите кейс CS2 (13 кейсов)</div>
+  <div class="cases-grid" id="casesGrid"></div>
+
+  <div class="roulette-box">
+    <div class="roulette-header">
+      <h2 id="selectedCaseName" style="font-size:18px;">Кейс «Киловатт»</h2>
+      <label style="font-size:13px; color:#8b949e; cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" id="fastSpin"> Быстрая прокрутка
+      </label>
+    </div>
+    <div class="roulette-viewport" id="viewport">
+      <div class="roulette-line"></div>
+      <div class="roulette-track" id="track"></div>
+    </div>
+    <div class="open-actions">
+      <button class="btn btn-primary btn-open" id="openBtn" onclick="openCase()">Открыть за $15.00 (+15 ₽)</button>
+    </div>
+  </div>
+
+  <div class="section-title">Содержимое выбранного кейса</div>
+  <div class="contents-grid" id="contentsGrid"></div>
+
+  <section class="inventory-section">
+    <div class="section-title">
+      <span>Ваш инвентарь (<span id="invCount">0</span>)</span>
+      <button class="btn" onclick="sellAll()">Продать всё (<span id="invTotal">$0.00</span>)</button>
+    </div>
+    <div class="inv-grid" id="invGrid"></div>
+  </section>
+</main>
+
+<div class="modal-bg" id="dropModal">
+  <div class="modal" id="dropModalBox">
+    <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#f59e0b; font-weight:700;">Ваш дроп</div>
+    <img id="dropImg" src="" alt="">
+    <h3 id="dropName">Скин</h3>
+    <div id="dropPrice" style="font-size:16px; font-weight:700; color:#3fb950;">$0.00</div>
+    <div id="dropRubBonus" style="font-size:12px; color:#fbbf24; margin-top:4px;">+15 ₽ за открытие кейса</div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="sellLastDrop()">Продать сразу</button>
+      <button class="btn" onclick="closeModal()">Оставить в инвентаре</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CASES = [
+  {
+    id: 'kilowatt', name: 'Кейс «Киловатт»', apiName: 'Kilowatt Case', price: 15,
+    items: [
+      { name: '★ Кукри | Градиент', api: 'Kukri Knife | Fade', r: 'gold', p: 950 },
+      { name: 'AK-47 | Наследство', api: 'AK-47 | Inheritance', r: 'cov', p: 185 },
+      { name: 'AWP | Хромовая пушка', api: 'AWP | Chrome Cannon', r: 'cov', p: 140 },
+      { name: 'M4A1-S | Чёрный лотос', api: 'M4A1-S | Black Lotus', r: 'cla', p: 42 },
+      { name: 'USP-S | Зубоскал', api: 'USP-S | Jawbreaker', r: 'cla', p: 28 },
+      { name: 'Zeus x27 | Олимп', api: 'Zeus x27 | Olympus', r: 'cla', p: 24 },
+      { name: 'Glock-18 | Блок-18', api: 'Glock-18 | Block-18', r: 'res', p: 8 },
+      { name: 'MP7 | Смеющийся череп', api: 'MP7 | Just Smile', r: 'res', p: 6 },
+      { name: 'MAC-10 | Световой короб', api: 'MAC-10 | Light Box', r: 'mil', p: 2.5 },
+      { name: 'SSG 08 | Катастрофа', api: 'SSG 08 | Dezastre', r: 'mil', p: 2 }
+    ]
+  },
+  {
+    id: 'gallery', name: 'Галерейный кейс', apiName: 'Gallery Case', price: 16,
+    items: [
+      { name: '★ Кукри | Убийство', api: 'Kukri Knife | Slaughter', r: 'gold', p: 820 },
+      { name: 'M4A1-S | Вейпорвейв', api: 'M4A1-S | Vaporwave', r: 'cov', p: 190 },
+      { name: 'Glock-18 | Золотой зуб', api: 'Glock-18 | Gold Toof', r: 'cov', p: 115 },
+      { name: 'AK-47 | Чужак', api: 'AK-47 | The Outsiders', r: 'cla', p: 48 },
+      { name: 'UMP-45 | Неоновый гонщик', api: 'UMP-45 | Neo-Noir', r: 'cla', p: 22 },
+      { name: 'P250 | Эпицентр', api: 'P250 | Epicenter', r: 'cla', p: 19 },
+      { name: 'SSG 08 | Быстрый удар', api: 'SSG 08 | Rapid Transit', r: 'res', p: 7 },
+      { name: 'MAC-10 | Саиба Они', api: 'MAC-10 | Saibā Oni', r: 'res', p: 5 },
+      { name: 'M4A4 | Турбина', api: 'M4A4 | Turbine', r: 'mil', p: 2.5 },
+      { name: 'USP-S | 027', api: 'USP-S | 27', r: 'mil', p: 2 }
+    ]
+  },
+  {
+    id: 'fever', name: 'Кейс «Лихорадка»', apiName: 'Fever Case', price: 17,
+    items: [
+      { name: '★ Скелетный нож | Волны', api: 'Skeleton Knife | Doppler', r: 'gold', p: 1350 },
+      { name: 'AWP | Поток информации', api: 'AWP | Printstream', r: 'cov', p: 260 },
+      { name: 'FAMAS | Дурной трип', api: 'FAMAS | Bad Trip', r: 'cov', p: 95 },
+      { name: 'Glock-18 | Синобу', api: 'Glock-18 | Shinobu', r: 'cla', p: 36 },
+      { name: 'AK-47 | Жгучий холод', api: 'AK-47 | Searing Rage', r: 'cla', p: 44 },
+      { name: 'Desert Eagle | Змеиный удар', api: 'Desert Eagle | Serpent Strike', r: 'res', p: 11 },
+      { name: 'Zeus x27 | Тосаи', api: 'Zeus x27 | Tosai', r: 'res', p: 8 },
+      { name: 'MP9 | Нексус', api: 'MP9 | Nexus', r: 'mil', p: 3 },
+      { name: 'M4A4 | Рубилка', api: 'M4A4 | Choppa', r: 'mil', p: 2.5 }
+    ]
+  },
+  {
+    id: 'revolution', name: 'Кейс «Революция»', apiName: 'Revolution Case', price: 12,
+    items: [
+      { name: '★ Спортивные перчатки | Порок', api: 'Sport Gloves | Vice', r: 'gold', p: 1600 },
+      { name: 'M4A4 | Темукау', api: 'M4A4 | Temukau', r: 'cov', p: 135 },
+      { name: 'AK-47 | Выстрел в голову', api: 'AK-47 | Head Shot', r: 'cov', p: 90 },
+      { name: 'AWP | Двойственность', api: 'AWP | Duality', r: 'cla', p: 26 },
+      { name: 'UMP-45 | Дикий ребёнок', api: 'UMP-45 | Wild Child', r: 'cla', p: 15 },
+      { name: 'P2000 | Злобный даймё', api: 'P2000 | Wicked Sick', r: 'cla', p: 14 },
+      { name: 'M4A1-S | Эмфорозавр-S', api: 'M4A1-S | Emphorosaur-S', r: 'res', p: 5 },
+      { name: 'Glock-18 | Умбральный кролик', api: 'Glock-18 | Umbral Rabbit', r: 'res', p: 4 },
+      { name: 'MAC-10 | Саккаку', api: 'MAC-10 | Sakkaku', r: 'res', p: 4 },
+      { name: 'MP9 | Пуховик', api: 'MP9 | Featherweight', r: 'mil', p: 1.5 }
+    ]
+  },
+  {
+    id: 'dreams', name: 'Грёзы и кошмары', apiName: 'Dreams & Nightmares Case', price: 14,
+    items: [
+      { name: '★ Нож-бабочка | Гамма-волны', api: 'Butterfly Knife | Gamma Doppler', r: 'gold', p: 2400 },
+      { name: 'AK-47 | Ночной кошмар', api: 'AK-47 | Nightwish', r: 'cov', p: 85 },
+      { name: 'MP9 | Звёздный защитник', api: 'MP9 | Starlight Protector', r: 'cov', p: 65 },
+      { name: 'Dual Berettas | Мелодия', api: 'Dual Berettas | Melondrama', r: 'cla', p: 16 },
+      { name: 'FAMAS | Быстрое движение глаз', api: 'FAMAS | Rapid Eye Movement', r: 'cla', p: 14 },
+      { name: 'MP7 | Бездна', api: 'MP7 | Abyssal Apparition', r: 'cla', p: 12 },
+      { name: 'M4A1-S | Ночной ужас', api: 'M4A1-S | Night Terror', r: 'res', p: 5 },
+      { name: 'USP-S | Билет в ад', api: 'USP-S | Ticket to Hell', r: 'res', p: 4.5 },
+      { name: 'G3SG1 | Поляна грёз', api: 'G3SG1 | Dream Glade', r: 'res', p: 3.5 },
+      { name: 'Five-SeveN | Каляки', api: 'Five-SeveN | Scrawl', r: 'mil', p: 1.8 }
+    ]
+  },
+  {
+    id: 'fracture', name: 'Кейс «Разлом»', apiName: 'Fracture Case', price: 10,
+    items: [
+      { name: '★ Скелетный нож | Градиент', api: 'Skeleton Knife | Fade', r: 'gold', p: 1450 },
+      { name: 'Desert Eagle | Поток информации', api: 'Desert Eagle | Printstream', r: 'cov', p: 110 },
+      { name: 'AK-47 | Легион Анубиса', api: 'AK-47 | Legion of Anubis', r: 'cov', p: 38 },
+      { name: 'M4A4 | Зубная фея', api: 'M4A4 | Tooth Fairy', r: 'cla', p: 14 },
+      { name: 'Glock-18 | Vogue', api: 'Glock-18 | Vogue', r: 'cla', p: 13 },
+      { name: 'XM1014 | Погребённый', api: 'XM1014 | Entombed', r: 'cla', p: 10 },
+      { name: 'MAC-10 | Приманка', api: 'MAC-10 | Allure', r: 'res', p: 4 },
+      { name: 'Galil AR | Коннекс', api: 'Galil AR | Connexion', r: 'res', p: 3.5 },
+      { name: 'MP5-SD | Китобой', api: 'MP5-SD | Kitbash', r: 'res', p: 3 },
+      { name: 'P250 | Кассетный', api: 'P250 | Cassette', r: 'mil', p: 1.2 }
+    ]
+  },
+  {
+    id: 'recoil', name: 'Кейс «Отдача»', apiName: 'Recoil Case', price: 11,
+    items: [
+      { name: '★ Перчатки спецназа | Мраморный градиент', api: 'Specialist Gloves | Marble Fade', r: 'gold', p: 780 },
+      { name: 'USP-S | Поток информации', api: 'USP-S | Printstream', r: 'cov', p: 145 },
+      { name: 'AWP | Хроматическая аберрация', api: 'AWP | Chromatic Aberration', r: 'cov', p: 45 },
+      { name: 'AK-47 | Ледяной уголь', api: 'AK-47 | Ice Coaled', r: 'cla', p: 24 },
+      { name: 'Sawed-Off | Поцелуй любви', api: 'Sawed-Off | Kiss♥Love', r: 'cla', p: 11 },
+      { name: 'P250 | Видения', api: 'P250 | Visions', r: 'cla', p: 10 },
+      { name: 'R8 Revolver | Безумная восьмёрка', api: 'R8 Revolver | Crazy 8', r: 'res', p: 3.5 },
+      { name: 'SG 553 | Драконотех', api: 'SG 553 | Dragon Tech', r: 'res', p: 3.2 },
+      { name: 'M249 | Деловой', api: 'M249 | Downtown', r: 'res', p: 2.8 },
+      { name: 'Glock-18 | Зима близко', api: 'Glock-18 | Winterized', r: 'mil', p: 1.4 }
+    ]
+  },
+  {
+    id: 'snakebite', name: 'Кейс «Змеиный укус»', apiName: 'Snakebite Case', price: 11,
+    items: [
+      { name: '★ Водительские перчатки | Снежный барс', api: 'Driver Gloves | Snow Leopard', r: 'gold', p: 1100 },
+      { name: 'M4A4 | В живом цвете', api: 'M4A4 | In Living Color', r: 'cov', p: 42 },
+      { name: 'USP-S | Предатель', api: 'USP-S | The Traitor', r: 'cov', p: 58 },
+      { name: 'AK-47 | Сланец', api: 'AK-47 | Slate', r: 'cla', p: 16 },
+      { name: 'Galil AR | Хроматическая аберрация', api: 'Galil AR | Chromatic Aberration', r: 'cla', p: 11 },
+      { name: 'MP9 | Пищевая цепочка', api: 'MP9 | Food Chain', r: 'cla', p: 10 },
+      { name: 'Desert Eagle | Стрелковая дисциплина', api: 'Desert Eagle | Trigger Discipline', r: 'res', p: 4 },
+      { name: 'MAC-10 | Кнопка', api: 'MAC-10 | Button Masher', r: 'res', p: 3 },
+      { name: 'P250 | Киберпанцирь', api: 'P250 | Cyber Shell', r: 'res', p: 2.8 },
+      { name: 'Glock-18 | Прозрачный полимер', api: 'Glock-18 | Clear Polymer', r: 'mil', p: 1.5 }
+    ]
+  },
+  {
+    id: 'prisma2', name: 'Кейс «Призма 2»', apiName: 'Prisma 2 Case', price: 13,
+    items: [
+      { name: '★ Коготь | Волны', api: 'Talon Knife | Doppler', r: 'gold', p: 1200 },
+      { name: 'M4A1-S | Вторая игрок', api: 'M4A1-S | Player Two', r: 'cov', p: 95 },
+      { name: 'Glock-18 | Королева пуль', api: 'Glock-18 | Bullet Queen', r: 'cov', p: 52 },
+      { name: 'AK-47 | Фантомный вредитель', api: 'AK-47 | Phantom Disruptor', r: 'cla', p: 17 },
+      { name: 'MAC-10 | Дискотехника', api: 'MAC-10 | Disco Tech', r: 'cla', p: 14 },
+      { name: 'MAG-7 | Справедливость', api: 'MAG-7 | Justice', r: 'cla', p: 11 },
+      { name: 'AWP | Капилляры', api: 'AWP | Capillary', r: 'res', p: 4.5 },
+      { name: 'SSG 08 | Лихорадочный сон', api: 'SSG 08 | Fever Dream', r: 'res', p: 3.8 },
+      { name: 'SCAR-20 | Исполнитель', api: 'SCAR-20 | Enforcer', r: 'res', p: 3 },
+      { name: 'Desert Eagle | Синяя фанера', api: 'Desert Eagle | Blue Ply', r: 'mil', p: 1.6 }
+    ]
+  },
+  {
+    id: 'dangerzone', name: 'Кейс «Запретная зона»', apiName: 'Danger Zone Case', price: 14,
+    items: [
+      { name: '★ Коготь | Градиент', api: 'Talon Knife | Fade', r: 'gold', p: 1300 },
+      { name: 'AK-47 | Азимов', api: 'AK-47 | Asiimov', r: 'cov', p: 120 },
+      { name: 'AWP | Неонуар', api: 'AWP | Neo-Noir', r: 'cov', p: 55 },
+      { name: 'Desert Eagle | Механо-пушка', api: 'Desert Eagle | Mecha Industries', r: 'cla', p: 19 },
+      { name: 'MP5-SD | Фосфор', api: 'MP5-SD | Phosphor', r: 'cla', p: 15 },
+      { name: 'UMP-45 | Импульс', api: 'UMP-45 | Momentum', r: 'cla', p: 13 },
+      { name: 'USP-S | Взгляд в прошлое', api: 'USP-S | Flashback', r: 'res', p: 4.5 },
+      { name: 'Glock-18 | Оксидное пламя', api: 'Glock-18 | Oxide Blaze', r: 'res', p: 3.5 },
+      { name: 'M4A4 | Магний', api: 'M4A4 | Magnesium', r: 'mil', p: 2 }
+    ]
+  },
+  {
+    id: 'phoenix', name: 'Кейс «Феникс»', apiName: 'Operation Phoenix Weapon Case', price: 18,
+    items: [
+      { name: '★ Керамбит | Градиент', api: 'Karambit | Fade', r: 'gold', p: 2200 },
+      { name: 'AWP | Азимов', api: 'AWP | Asiimov', r: 'cov', p: 165 },
+      { name: 'AUG | Хамелеон', api: 'AUG | Chameleon', r: 'cov', p: 32 },
+      { name: 'AK-47 | Красная линия', api: 'AK-47 | Redline', r: 'cla', p: 55 },
+      { name: 'P90 | Треугольник', api: 'P90 | Trigon', r: 'cla', p: 18 },
+      { name: 'Nova | Антиквариат', api: 'Nova | Antique', r: 'cla', p: 15 },
+      { name: 'USP-S | Страж', api: 'USP-S | Guardian', r: 'res', p: 7 },
+      { name: 'MAC-10 | Жар', api: 'MAC-10 | Heat', r: 'res', p: 5 },
+      { name: 'SG 553 | Пульс', api: 'SG 553 | Pulse', r: 'res', p: 4.5 },
+      { name: 'UMP-45 | Капрал', api: 'UMP-45 | Corporal', r: 'mil', p: 2 }
+    ]
+  },
+  {
+    id: 'riptide', name: 'Кейс «Хищные воды»', apiName: 'Operation Riptide Case', price: 19,
+    items: [
+      { name: '★ Нож-бабочка | Автотроника', api: 'Butterfly Knife | Autotronic', r: 'gold', p: 1950 },
+      { name: 'AK-47 | Музей элиты', api: 'AK-47 | Leet Museo', r: 'cov', p: 95 },
+      { name: 'Desert Eagle | Океанское побережье', api: 'Desert Eagle | Ocean Drive', r: 'cov', p: 115 },
+      { name: 'Glock-18 | Закусочная', api: 'Glock-18 | Snack Attack', r: 'cla', p: 24 },
+      { name: 'SSG 08 | Турбовыпад', api: 'SSG 08 | Turbo Peek', r: 'cla', p: 21 },
+      { name: 'MAC-10 | Игрушечная коробка', api: 'MAC-10 | Toybox', r: 'cla', p: 16 },
+      { name: 'M4A4 | Паучья лилия', api: 'M4A4 | Spider Lily', r: 'res', p: 8 },
+      { name: 'FAMAS | ZX Spectron', api: 'FAMAS | ZX Spectron', r: 'res', p: 6 },
+      { name: 'USP-S | Чёрный лотос', api: 'USP-S | Black Lotus', r: 'mil', p: 4 }
+    ]
+  },
+  {
+    id: 'bravo', name: 'Операция «Браво»', apiName: 'Operation Bravo Case', price: 35,
+    items: [
+      { name: '★ Штык-нож M9 | Убийство', api: 'M9 Bayonet | Slaughter', r: 'gold', p: 1550 },
+      { name: 'AK-47 | Огненный змей', api: 'AK-47 | Fire Serpent', r: 'cov', p: 980 },
+      { name: 'Desert Eagle | Золотой карп', api: 'Desert Eagle | Golden Koi', r: 'cov', p: 130 },
+      { name: 'AWP | Графит', api: 'AWP | Graphite', r: 'cla', p: 210 },
+      { name: 'P2000 | Океанская пена', api: 'P2000 | Ocean Foam', r: 'cla', p: 150 },
+      { name: 'P90 | Изумрудный дракон', api: 'P90 | Emerald Dragon', r: 'cla', p: 185 },
+      { name: 'USP-S | Тёмная вода', api: 'USP-S | Overgrowth', r: 'res', p: 45 },
+      { name: 'M4A4 | Зирка', api: 'M4A4 | Zirka', r: 'res', p: 38 },
+      { name: 'Glock-18 | Драконья татуировка', api: 'Glock-18 | Dragon Tattoo', r: 'res', p: 95 },
+      { name: 'SG 553 | Волна-перфоратор', api: 'SG 553 | Wave Spray', r: 'mil', p: 12 }
+    ]
+  }
+];
+
+let state = {
+  usd: 100,
+  rub: 150,
+  selectedCaseId: 'kilowatt',
+  inventory: [],
+  usedPromos: [],
+  lastDaily: 0,
+  boostLevel: 0,
+  openedCount: 0
+};
+
+const imageCache = {};
+let isSpinning = false;
+let lastDroppedItem = null;
+
+function normalizeKey(str) {
+  return str
+    .replace(/^★\s*/, '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('cs2_sim_rub_v1'));
+    if (saved) state = { ...state, ...saved };
+  } catch (e) {}
+}
+
+function saveState() {
+  localStorage.setItem('cs2_sim_rub_v1', JSON.stringify(state));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function fallbackSvg(label, color = '#4b69ff') {
+  const clean = label.replace(/[<>&'"]/g, '').slice(0, 22);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1f2937"/><stop offset="100%" stop-color="${color}"/></linearGradient></defs>
+    <rect width="160" height="110" rx="10" fill="url(#g)" fill-opacity="0.35" stroke="${color}" stroke-width="2"/>
+    <text x="80" y="58" fill="#ffffff" font-family="Arial" font-size="11" font-weight="bold" text-anchor="middle">${clean}</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+function getRarityColor(r) {
+  return { mil: '#4b69ff', res: '#8847ff', cla: '#d32ce6', cov: '#eb4b4b', gold: '#ffd700' }[r] || '#4b69ff';
+}
+
+function getItemImg(apiName, label, r) {
+  const key = normalizeKey(apiName);
+  return imageCache[key] || fallbackSvg(label, getRarityColor(r));
+}
+
+async function fetchCs2Images() {
+  const endpoints = [
+    'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/crates.json',
+    'https://cdn.jsdelivr.net/gh/ByMykel/CSGO-API@main/public/api/en/crates.json'
+  ];
+  const skinEndpoints = [
+    'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json',
+    'https://cdn.jsdelivr.net/gh/ByMykel/CSGO-API@main/public/api/en/skins.json'
+  ];
+
+  let loaded = false;
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      data.forEach(c => {
+        if (c.name && c.image) imageCache[normalizeKey(c.name)] = c.image;
+        if (Array.isArray(c.contains)) {
+          c.contains.forEach(it => {
+            if (it.name && it.image) imageCache[normalizeKey(it.name)] = it.image;
+          });
+        }
+        if (Array.isArray(c.contains_rare)) {
+          c.contains_rare.forEach(it => {
+            if (it.name && it.image) imageCache[normalizeKey(it.name)] = it.image;
+          });
+        }
+      });
+      loaded = true;
+      break;
+    } catch (e) {}
+  }
+
+  for (const url of skinEndpoints) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const skins = await res.json();
+      skins.forEach(s => {
+        if (s.name && s.image) {
+          const clean = normalizeKey(s.name);
+          if (!imageCache[clean]) imageCache[clean] = s.image;
+        }
+      });
+      loaded = true;
+      break;
+    } catch (e) {}
+  }
+
+  const st = document.getElementById('apiStatus');
+  if (loaded) {
+    st.textContent = 'Реальные фото CS2 загружены ✓';
+    st.classList.add('ok');
+  } else {
+    st.textContent = 'Локальный режим фото';
+  }
+  renderAll();
+}
+
+function updateHeader() {
+  document.getElementById('usdDisplay').textContent = '$' + state.usd.toFixed(2);
+  document.getElementById('rubDisplay').textContent = Math.floor(state.rub).toLocaleString('ru-RU') + ' ₽';
+  document.getElementById('openCounter').textContent = 'Открыто кейсов: ' + state.openedCount;
+
+  const badge = document.getElementById('activeBoostBadge');
+  const names = { 0: 'Подкрутка: Выкл', 1: 'Активна: Подкрутка x2', 2: 'Активна: Подкрутка x5', 3: 'Активен: Гарант Редкого' };
+  badge.textContent = names[state.boostLevel] || 'Подкрутка: Выкл';
+
+  document.querySelectorAll('.boost-card').forEach((el, idx) => {
+    el.classList.toggle('active', state.boostLevel === idx + 1);
+  });
+
+  const btn = document.getElementById('dailyBtn');
+  const diff = Date.now() - state.lastDaily;
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (diff < dayMs) {
+    const hrs = Math.ceil((dayMs - diff) / (1000 * 60 * 60));
+    btn.disabled = true;
+    btn.textContent = `Бонус через ${hrs} ч.`;
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Бонус +$50 и +100 ₽';
+  }
+}
+
+function claimDaily() {
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (Date.now() - state.lastDaily < dayMs) return;
+  state.usd += 50;
+  state.rub += 100;
+  state.lastDaily = Date.now();
+  saveState();
+  updateHeader();
+  showToast('Получен ежедневный бонус: +$50 и +100 ₽!');
+}
+
+function applyPromo() {
+  const inp = document.getElementById('promoInput');
+  const code = inp.value.trim().toLowerCase();
+  if (!code) return;
+  const promos = {
+    dima: { usd: 1000, rub: 200, label: '+$1,000 и +200 ₽' },
+    pasha: { usd: 1000, rub: 200, label: '+$1,000 и +200 ₽' },
+    create: { usd: 100000, rub: 5000, label: '+$100,000 и +5,000 ₽' },
+    rub500: { usd: 0, rub: 500, label: '+500 ₽' }
+  };
+  if (!promos[code]) {
+    showToast('Неверный промокод');
+    return;
+  }
+  if (state.usedPromos.includes(code)) {
+    showToast('Этот промокод уже активирован');
+    return;
+  }
+  state.usd += promos[code].usd;
+  state.rub += promos[code].rub;
+  state.usedPromos.push(code);
+  inp.value = '';
+  saveState();
+  updateHeader();
+  showToast('Промокод активирован: ' + promos[code].label);
+}
+
+function buyBoost(level, cost) {
+  if (isSpinning) return;
+  if (state.boostLevel === level) {
+    showToast('Эта подкрутка уже выбрана для следующего открытия');
+    return;
+  }
+  if (state.rub < cost) {
+    showToast(`Недостаточно рублей! Нужно ${cost} ₽`);
+    return;
+  }
+  state.rub -= cost;
+  state.boostLevel = level;
+  saveState();
+  updateHeader();
+  showToast('Подкрутка активирована на следующее открытие кейса!');
+}
+
+function clickRub() {
+  state.rub += 5;
+  saveState();
+  updateHeader();
+}
+
+function exchangeUsdToRub() {
+  if (state.usd < 10) { showToast('Нужно минимум $10.00'); return; }
+  state.usd -= 10;
+  state.rub += 100;
+  saveState();
+  updateHeader();
+  showToast('Обменяно $10.00 на 100 ₽');
+}
+
+function exchangeUsdToRubBig() {
+  if (state.usd < 100) { showToast('Нужно минимум $100.00'); return; }
+  state.usd -= 100;
+  state.rub += 1000;
+  saveState();
+  updateHeader();
+  showToast('Обменяно $100.00 на 1,000 ₽');
+}
+
+function renderCases() {
+  const grid = document.getElementById('casesGrid');
+  grid.innerHTML = '';
+  CASES.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'case-card' + (c.id === state.selectedCaseId ? ' selected' : '');
+    div.onclick = () => {
+      if (isSpinning) return;
+      state.selectedCaseId = c.id;
+      saveState();
+      renderAll();
+    };
+    div.innerHTML = `
+      <img src="${getItemImg(c.apiName, c.name, 'gold')}" alt="${c.name}">
+      <div class="case-title">${c.name}</div>
+      <div class="case-price">$${c.price.toFixed(2)}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function getSelectedCase() {
+  return CASES.find(c => c.id === state.selectedCaseId) || CASES[0];
+}
+
+function renderContents() {
+  const c = getSelectedCase();
+  document.getElementById('selectedCaseName').textContent = c.name;
+  document.getElementById('openBtn').textContent = `Открыть за $${c.price.toFixed(2)} (+15 ₽)`;
+
+  const grid = document.getElementById('contentsGrid');
+  grid.innerHTML = '';
+  c.items.forEach(it => {
+    const card = document.createElement('div');
+    card.className = `skin-card rarity-${it.r}`;
+    card.innerHTML = `
+      <img src="${getItemImg(it.api, it.name, it.r)}" alt="${it.name}">
+      <div class="skin-name">${it.name}</div>
+      <div class="skin-price">$${it.p.toFixed(2)}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function pickRandomItem(c) {
+  const weights = { mil: 65, res: 22, cla: 9, cov: 3.2, gold: 0.8 };
+  if (state.boostLevel === 1) {
+    weights.cla *= 1.8; weights.cov *= 2.5; weights.gold *= 2.5;
+  } else if (state.boostLevel === 2) {
+    weights.cla *= 2.5; weights.cov *= 5; weights.gold *= 5;
+  } else if (state.boostLevel === 3) {
+    weights.mil = 0; weights.res = 0; weights.cla = 55; weights.cov = 32; weights.gold = 13;
+  }
+
+  const pool = [];
+  c.items.forEach(it => {
+    const w = weights[it.r] || 1;
+    if (w > 0) pool.push({ item: it, weight: w });
+  });
+
+  const total = pool.reduce((s, x) => s + x.weight, 0);
+  let rnd = Math.random() * total;
+  for (const entry of pool) {
+    rnd -= entry.weight;
+    if (rnd <= 0) return entry.item;
+  }
+  return pool[0].item;
+}
+
+function fillIdleTrack() {
+  const c = getSelectedCase();
+  const track = document.getElementById('track');
+  track.style.transition = 'none';
+  track.style.transform = 'translateX(0px)';
+  track.innerHTML = '';
+  for (let i = 0; i < 18; i++) {
+    const it = c.items[i % c.items.length];
+    const div = document.createElement('div');
+    div.className = `r-item rarity-${it.r}`;
+    div.innerHTML = `<img src="${getItemImg(it.api, it.name, it.r)}"><span>${it.name}</span>`;
+    track.appendChild(div);
+  }
+}
+
+function openCase() {
+  if (isSpinning) return;
+  const c = getSelectedCase();
+  if (state.usd < c.price) {
+    showToast('Недостаточно долларов! Введите промокод Dima или нажмите Бонус.');
+    return;
+  }
+
+  isSpinning = true;
+  state.usd -= c.price;
+  state.rub += 15;
+  state.openedCount += 1;
+  document.getElementById('openBtn').disabled = true;
+
+  const winner = pickRandomItem(c);
+  state.boostLevel = 0;
+  saveState();
+  updateHeader();
+
+  const totalCards = 45;
+  const winIndex = 36;
+  const track = document.getElementById('track');
+  track.style.transition = 'none';
+  track.style.transform = 'translateX(0px)';
+  track.innerHTML = '';
+
+  for (let i = 0; i < totalCards; i++) {
+    const it = i === winIndex ? winner : c.items[Math.floor(Math.random() * c.items.length)];
+    const div = document.createElement('div');
+    div.className = `r-item rarity-${it.r}`;
+    div.innerHTML = `<img src="${getItemImg(it.api, it.name, it.r)}"><span>${it.name}</span>`;
+    track.appendChild(div);
+  }
+
+  const cardWidth = 148;
+  const viewportWidth = document.getElementById('viewport').offsetWidth;
+  const offset = (winIndex * cardWidth) + (cardWidth / 2) - (viewportWidth / 2) + (Math.random() * 60 - 30);
+  const fast = document.getElementById('fastSpin').checked;
+  const duration = fast ? 1.1 : 4.2;
+
+  requestAnimationFrame(() => {
+    track.style.transition = `transform ${duration}s cubic-bezier(0.12, 0.85, 0.22, 1)`;
+    track.style.transform = `translateX(-${offset}px)`;
+  });
+
+  setTimeout(() => {
+    isSpinning = false;
+    document.getElementById('openBtn').disabled = false;
+    lastDroppedItem = { ...winner, uid: Date.now() + Math.random() };
+    state.inventory.unshift(lastDroppedItem);
+    saveState();
+    renderInventory();
+
+    document.getElementById('dropImg').src = getItemImg(winner.api, winner.name, winner.r);
+    document.getElementById('dropName').textContent = winner.name;
+    document.getElementById('dropPrice').textContent = '$' + winner.p.toFixed(2);
+    document.getElementById('dropModalBox').style.borderColor = getRarityColor(winner.r);
+    document.getElementById('dropModal').classList.add('open');
+  }, duration * 1000 + 150);
+}
+
+function closeModal() {
+  document.getElementById('dropModal').classList.remove('open');
+}
+
+function sellLastDrop() {
+  if (!lastDroppedItem) return;
+  const idx = state.inventory.findIndex(x => x.uid === lastDroppedItem.uid);
+  if (idx !== -1) sellItem(idx);
+  closeModal();
+}
+
+function sellItem(index) {
+  const it = state.inventory[index];
+  if (!it) return;
+  const rubBonus = Math.max(1, Math.round(it.p));
+  state.usd += it.p;
+  state.rub += rubBonus;
+  state.inventory.splice(index, 1);
+  saveState();
+  updateHeader();
+  renderInventory();
+  showToast(`Продано за $${it.p.toFixed(2)} (+${rubBonus} ₽)`);
+}
+
+function sellAll() {
+  if (!state.inventory.length) return;
+  let totalUsd = 0;
+  let totalRub = 0;
+  state.inventory.forEach(it => {
+    totalUsd += it.p;
+    totalRub += Math.max(1, Math.round(it.p));
+  });
+  state.usd += totalUsd;
+  state.rub += totalRub;
+  state.inventory = [];
+  saveState();
+  updateHeader();
+  renderInventory();
+  showToast(`Всё продано: +$${totalUsd.toFixed(2)} и +${totalRub} ₽`);
+}
+
+function renderInventory() {
+  const grid = document.getElementById('invGrid');
+  document.getElementById('invCount').textContent = state.inventory.length;
+  const total = state.inventory.reduce((s, x) => s + x.p, 0);
+  document.getElementById('invTotal').textContent = '$' + total.toFixed(2);
+
+  grid.innerHTML = '';
+  state.inventory.forEach((it, idx) => {
+    const rubBonus = Math.max(1, Math.round(it.p));
+    const card = document.createElement('div');
+    card.className = `skin-card rarity-${it.r}`;
+    card.innerHTML = `
+      <img src="${getItemImg(it.api, it.name, it.r)}">
+      <div class="skin-name">${it.name}</div>
+      <div class="skin-price">$${it.p.toFixed(2)} (+${rubBonus} ₽)</div>
+      <button class="btn" onclick="sellItem(${idx})">Продать</button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderAll() {
+  updateHeader();
+  renderCases();
+  renderContents();
+  fillIdleTrack();
+  renderInventory();
+}
+
+loadState();
+renderAll();
+fetchCs2Images();
+</script>
+</body>
+</html>
